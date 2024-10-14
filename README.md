@@ -47,7 +47,7 @@ In the client folder, run:
   ```bash
   npm start
 
-### 5. Start Backend
+### 6. Start Backend
 In the server folder, run:
 - **macOS**
   ```bash
