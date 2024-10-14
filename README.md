@@ -1,4 +1,4 @@
-"## Database Setup Instructions
+## Database Setup Instructions
 
 To set up the SQLite database for the task scheduler project, follow these steps:
 
