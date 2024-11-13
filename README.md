@@ -53,6 +53,21 @@ Inside the SQLite shell (which opens after running sqlite3 tasks.db), create the
     status TEXT DEFAULT 'pending'
   );
 
+Also, we need to set up a table for logging tasks. Create that table by running the following SQL command:
+
+- **macOS**
+  ```bash
+  
+  CREATE TABLE IF NOT EXISTS TaskLog (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    description TEXT,
+    priority INTEGER,
+    due_date DATE,
+    log_action TEXT,
+    log_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
 
 ### 4. Exit the SQLite Shell
 After creating the table, type .exit to exit the SQLite shell:
