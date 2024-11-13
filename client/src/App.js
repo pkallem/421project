@@ -35,6 +35,7 @@ const useStyles = makeStyles({
 const App = () => {
     const classes = useStyles();
     const [tasks, setTasks] = useState([]);
+    const [taskLog, setTaskLog] = useState([]); // State for task log
     const [editingTaskId, setEditingTaskId] = useState(null);
     const [editedTask, setEditedTask] = useState({ title: '', description: '', priority: 1, due_date: '' });
     const [form, setForm] = useState({ title: '', description: '', priority: 1, due_date: '' });
@@ -42,6 +43,10 @@ const App = () => {
 
     useEffect(() => {
         fetchTasks();
+    }, []);
+    
+    useEffect(() => {
+        fetchTaskLog();
     }, []);
 
     const fetchTasks = async () => {
@@ -58,6 +63,7 @@ const App = () => {
         try {
             await axios.post('http://localhost:5001/tasks', form);
             fetchTasks();
+            fetchTaskLog();
             setForm({ title: '', description: '', priority: 1, due_date: '' }); // Clear form after submit
         } catch (error) {
             console.error('Error adding task:', error.response ? error.response.data : error.message);
@@ -68,6 +74,7 @@ const App = () => {
         try {
             await axios.delete(`http://localhost:5001/tasks/${id}`);
             fetchTasks();
+            fetchTaskLog();
         } catch (error) {
             console.error('Error deleting task:', error.response ? error.response.data : error.message);
         }
@@ -95,6 +102,15 @@ const App = () => {
 
     const handleFieldChange = (field, value) => {
         setEditedTask({ ...editedTask, [field]: value });
+    };
+
+    const fetchTaskLog = async () => {
+        try {
+            const result = await axios.get('http://localhost:5001/tasklog');
+            setTaskLog(result.data);
+        } catch (error) {
+            console.error('Error fetching tasks:', error.response ? error.response.data : error.message);
+        }
     };
 
     const toggleSortBy = () => {
@@ -266,6 +282,28 @@ const App = () => {
                                     </Button>
                                 </>
                             )}
+                        </CardContent>
+                    </Card>
+                ))
+            )}
+            {/* Task Log Section */}
+            <Typography variant="h4" gutterBottom>
+                Task Log
+            </Typography>
+            {taskLog.length === 0 ? (
+                <Typography variant="h6" align="center" color="textSecondary">
+                    No log entries.
+                </Typography>
+            ) : (
+                taskLog.map((log) => (
+                    <Card key={log.id} className={classes.taskCard}>
+                        <CardContent>
+                            <Typography className={classes.taskTitle}>{log.title}</Typography>
+                            <Typography className={classes.taskDescription}>{log.description}</Typography>
+                            <Typography>Priority: {log.priority}</Typography>
+                            <Typography>Due Date: {log.due_date}</Typography>
+                            <Typography>Log Action: {log.log_action}</Typography>
+                            <Typography>Timestamp: {log.log_timestamp}</Typography>
                         </CardContent>
                     </Card>
                 ))

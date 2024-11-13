@@ -29,6 +29,37 @@ db.serialize(() => {
         username TEXT NOT NULL,
         password TEXT NOT NULL
     )`);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS TaskLog (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            description TEXT,
+            priority INTEGER,
+            due_date DATE,
+            log_action TEXT,
+            log_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Create triggers
+    db.run(`
+        CREATE TRIGGER IF NOT EXISTS log_task_deletion
+        AFTER DELETE ON Tasks
+        BEGIN
+            INSERT INTO TaskLog (title, description, priority, due_date, log_action, log_timestamp)
+            VALUES (OLD.title, OLD.description, OLD.priority, OLD.due_date, 'DELETE', CURRENT_TIMESTAMP);
+        END;
+    `);
+
+    db.run(`
+        CREATE TRIGGER IF NOT EXISTS log_task_add
+        AFTER INSERT ON Tasks
+        BEGIN
+            INSERT INTO TaskLog (title, description, priority, due_date, log_action, log_timestamp)
+            VALUES (NEW.title, NEW.description, NEW.priority, NEW.due_date, 'INSERT', CURRENT_TIMESTAMP);
+        END;
+    `);
 });
 
 // Add New Task
@@ -74,6 +105,16 @@ app.put('/tasks/:id', (req, res) => {
 // Show Tasks (Select Records)
 app.get('/tasks', (req, res) => {
     db.all(`SELECT * FROM Tasks`, [], (err, rows) => {
+        if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+        res.json(rows);
+    });
+});
+
+// Show Tasklog
+app.get('/tasklog', (req, res) => {
+    db.all(`SELECT * FROM TaskLog`, [], (err, rows) => {
         if (err) {
             return res.status(400).json({ error: err.message });
         }
