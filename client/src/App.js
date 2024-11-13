@@ -3,7 +3,6 @@ import axios from 'axios';
 import { Container, TextField, Button, Card, CardContent, Typography, Grid } from '@mui/material';
 import { makeStyles } from '@mui/styles';
 
-// Custom styles
 const useStyles = makeStyles({
     formContainer: {
         marginTop: '20px',
@@ -39,6 +38,7 @@ const App = () => {
     const [editingTaskId, setEditingTaskId] = useState(null);
     const [editedTask, setEditedTask] = useState({ title: '', description: '', priority: 1, due_date: '' });
     const [form, setForm] = useState({ title: '', description: '', priority: 1, due_date: '' });
+    const [sortBy, setSortBy] = useState('priority'); // Start with 'priority'
 
     useEffect(() => {
         fetchTasks();
@@ -97,13 +97,24 @@ const App = () => {
         setEditedTask({ ...editedTask, [field]: value });
     };
 
+    const toggleSortBy = () => {
+        setSortBy((prevSortBy) => (prevSortBy === 'priority' ? 'date' : 'priority'));
+    };
+
+    const sortedTasks = [...tasks].sort((a, b) => {
+        if (sortBy === 'priority') {
+            return a.priority - b.priority; // Lowest priority first
+        } else {
+            return new Date(a.due_date) - new Date(b.due_date); // Closest date first
+        }
+    });
+
     return (
         <Container>
             <Typography variant="h3" align="center" gutterBottom>
                 Task Scheduler
             </Typography>
 
-            {/* Task Form */}
             <form className={classes.formContainer} onSubmit={handleSubmit}>
                 <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
@@ -158,16 +169,25 @@ const App = () => {
                 </Grid>
             </form>
 
-            {/* Task List */}
+            {/* Sorting Toggle Button */}
+            <Button
+                variant="contained"
+                color="secondary"
+                onClick={toggleSortBy}
+                style={{ marginBottom: '20px' }}
+            >
+                Sorted by {sortBy === 'priority' ? 'Priority' : 'Date'}
+            </Button>
+
             <Typography variant="h4" gutterBottom>
                 Task List
             </Typography>
-            {tasks.length === 0 ? (
+            {sortedTasks.length === 0 ? (
                 <Typography variant="h6" align="center" color="textSecondary">
                     No tasks available. Add a new task!
                 </Typography>
             ) : (
-                tasks.map((task) => (
+                sortedTasks.map((task) => (
                     <Card key={task.id} className={classes.taskCard}>
                         <CardContent>
                             {editingTaskId === task.id ? (
