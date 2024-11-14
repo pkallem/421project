@@ -113,6 +113,16 @@ const App = () => {
         }
     };
 
+    const clearTaskLog = async () => {
+        try {
+            const response = await axios.delete('http://localhost:5001/tasklogtwo');
+            alert(response.data.message);
+            fetchTaskLog();
+        } catch (error) {
+            alert('Failed to clear task log');
+        }
+    };
+
     const toggleSortBy = () => {
         setSortBy((prevSortBy) => (prevSortBy === 'priority' ? 'date' : 'priority'));
     };
@@ -286,6 +296,14 @@ const App = () => {
                     </Card>
                 ))
             )}
+            <Button
+                variant="contained"
+                color="secondary"
+                onClick={clearTaskLog}
+                style={{ marginBottom: '20px' }}
+            >
+                Clear Task Log
+            </Button>
             {/* Task Log Section */}
             <Typography variant="h4" gutterBottom>
                 Task Log

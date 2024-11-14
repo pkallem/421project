@@ -89,6 +89,17 @@ app.delete('/tasks/:id', (req, res) => {
     });
 });
 
+// Clear Task Log
+app.delete('/tasklogtwo', (req, res) => {
+    db.run(`DELETE FROM TaskLog`, function (err) {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to clear task log' });
+        }
+        res.json({ message: 'Task log cleared successfully' });
+    });
+});
+
+
 // Update Task
 app.put('/tasks/:id', (req, res) => {
     const { title, description, priority, due_date, status } = req.body;
