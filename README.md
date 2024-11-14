@@ -22,6 +22,25 @@
 
 To set up the SQLite database for the task scheduler project, follow these steps:
 
+### 1. Initialize and Start Frontend
+From the root directory, run:
+- **macOS**
+  ```bash
+  cd client
+  npm install
+  npm start
+
+### 2. Initialize and Start Backend
+From the root directory, run:
+- **macOS**
+  ```bash
+  cd server
+  npm install
+  node app.js
+
+
+## Asides
+The following should already be covered by the initializing process above.
 ### 1. Install SQLite
 
 If you don’t have SQLite installed on your local machine, you can install it via the following methods:
