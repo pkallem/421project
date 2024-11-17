@@ -84,7 +84,7 @@ After creating the table, type .exit to exit the SQLite shell:
   npm install
 
 ### 6. Create .env file
-In the server folder, create a .env file and enter a secret key (can be whatever):
+In the server folder, create a .env file and copy in the text below (key can be anything):
 - **macOS**
   ```bash
   SECRET_KEY=enter-your-key-here
