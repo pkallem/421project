@@ -30,6 +30,7 @@ If you don’t have SQLite installed on your local machine, you can install it v
   ```bash
   brew install sqlite
 - **Windows**:
+
   Step 1 − Go to the [SQLite](https://www.sqlite.org/download.html) download page, and download precompiled binaries from the Windows section.
 
   Step 2 − Download sqlite-shell-win32-*.zip and sqlite-dll-win32-*.zip zipped files.
