@@ -86,17 +86,19 @@ After creating the table, type .exit to exit the SQLite shell:
 ### 6. Create .env file
 In the server folder, create a .env file and enter a secret key (can be whatever):
 - **macOS**
-  ```
+  ```bash
   SECRET_KEY=enter-your-key-here
 
-### 6. Start Frontend
+### 7. Start Frontend
 In the client folder, run:
 - **macOS**
   ```bash
   npm start
 
-### 7. Start Backend
+### 8. Start Backend
 In the server folder, run:
 - **macOS**
   ```bash
   node app.js
+
+Now, you should be ready to use the app!
