@@ -171,6 +171,42 @@ app.post('/register', async (req, res) => {
     });
 });
 
+// Update Task
+app.put('/tasks/:id', authenticateToken, (req, res) => {
+    const { title, description, priority, due_date, status } = req.body;
+    const taskId = req.params.id;
+    const userId = req.user.userId; 
+
+    if (!title || !priority || !due_date || status === undefined) {
+        return res.status(400).json({ error: 'Missing title, priority, due date, or status' });
+    }
+
+    db.get('SELECT * FROM Tasks WHERE id = ? AND user_id = ?', [taskId, userId], (err, task) => {
+        if (err || !task) {
+            return res.status(400).json({ error: 'Task not found or you do not have permission to update it' });
+        }
+        db.run(`
+            UPDATE Tasks 
+            SET title = ?, description = ?, priority = ?, due_date = ?, status = ? 
+            WHERE id = ? AND user_id = ?`,
+            [title, description, priority, due_date, status, taskId, userId], function (err) {
+                if (err) {
+                    return res.status(400).json({ error: err.message });
+                }
+                db.run(`
+                    INSERT INTO TaskLog (user_id, title, description, priority, due_date, log_action)
+                    VALUES (?, ?, ?, ?, ?, 'UPDATE')`,
+                    [userId, title, description, priority, due_date], function (err) {
+                        if (err) {
+                            return res.status(400).json({ error: err.message });
+                        }
+
+                        res.json({ message: 'Task updated successfully' });
+                    });
+            });
+    });
+});
+
 // Login User
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;

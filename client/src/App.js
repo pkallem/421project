@@ -1,4 +1,4 @@
-import React, { useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import axios from 'axios';
 import { Container, TextField, Button, Typography, List, ListItem, ListItemText, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -14,8 +14,23 @@ const App = () => {
         priority: '',
         due_date: ''
     });
+    const [editingTaskId, setEditingTaskId] = useState(null);
+    const [editedTask, setEditedTask] = useState({
+        title: '',
+        description: '',
+        priority: '',
+        due_date: '',
+        status: 'pending'
+    });
+    const [sortBy, setSortBy] = useState('priority');
+
     const [token, setToken] = useState(localStorage.getItem('token') || ''); 
     const [isRegistering, setIsRegistering] = useState(false); 
+
+    useEffect(() => {
+        fetchTasks();
+        fetchTaskLog();
+    }, []);
 
     // Handle login form submission
     const handleLogin = async (e) => {
@@ -72,14 +87,13 @@ const App = () => {
         }
     };
 
-    //  Fetch tasks after successful login
     const fetchTasks = async () => {
         if (!token) return alert('Please log in first');
         try {
             const response = await axios.get('http://localhost:5001/tasks', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                }
+                },
             });
             setTasks(response.data);
         } catch (error) {
@@ -87,10 +101,11 @@ const App = () => {
             alert('Failed to fetch tasks');
         }
     };
+    
 
     // Fetch task logs
     const fetchTaskLog = async () => {
-        const token = localStorage.getItem('token'); // Get the token from localStorage
+        const token = localStorage.getItem('token'); 
     
         if (!token) {
             alert('Please log in');
@@ -100,10 +115,10 @@ const App = () => {
         try {
             const response = await axios.get('http://localhost:5001/tasklog', {
                 headers: {
-                    'Authorization': `Bearer ${token}` // Include the token in the request header
+                    'Authorization': `Bearer ${token}`
                 }
             });
-            setTaskLog(response.data); // Set the task log in the state
+            setTaskLog(response.data); 
         } catch (error) {
             console.error('Failed to fetch task log:', error.response ? error.response.data : error.message);
             alert('Failed to fetch task log');
@@ -142,35 +157,142 @@ const App = () => {
         }
     };
 
-    // Update task input field values
-    const handleTaskChange = (e) => {
-        setNewTask({
-            ...newTask,
-            [e.target.name]: e.target.value
-        });
-    };
 
-    // Show task list
+
     const renderTaskList = () => {
         if (tasks.length === 0) {
             return <Typography>No tasks available</Typography>;
         }
+        // Sort tasks based on the selected criteria (priority or due date)
+        const sortedTasks = [...tasks].sort((a, b) => {
+            if (sortBy === 'priority') {
+                return a.priority - b.priority;
+            } else {
+                return new Date(a.due_date) - new Date(b.due_date);
+            }
+        });
+    
         return (
             <List>
-                {tasks.map(task => (
+                {sortedTasks.map(task => (
                     <ListItem key={task.id}>
-                        <ListItemText 
-                            primary={task.title} 
-                            secondary={`Due: ${task.due_date} | Priority: ${task.priority}`} 
-                        />
-                        <IconButton color="secondary" onClick={() => handleDeleteTask(task.id)}>
-                            <DeleteIcon />
-                        </IconButton>
+                        {editingTaskId === task.id ? (
+                            <>
+                                <TextField
+                                    label="Title"
+                                    variant="outlined"
+                                    fullWidth
+                                    name="title"
+                                    value={editedTask.title}
+                                    onChange={handleTaskChange}
+                                    required
+                                />
+                                <TextField
+                                    label="Description"
+                                    variant="outlined"
+                                    fullWidth
+                                    name="description"
+                                    value={editedTask.description}
+                                    onChange={handleTaskChange}
+                                />
+                                <TextField
+                                    label="Priority"
+                                    variant="outlined"
+                                    fullWidth
+                                    name="priority"
+                                    value={editedTask.priority}
+                                    onChange={handleTaskChange}
+                                    required
+                                />
+                                <TextField
+                                    label="Due Date"
+                                    type="date"
+                                    variant="outlined"
+                                    fullWidth
+                                    name="due_date"
+                                    value={editedTask.due_date}
+                                    onChange={handleTaskChange}
+                                    required
+                                    InputLabelProps={{ shrink: true }}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="contained"
+                                    color="primary"
+                                    fullWidth
+                                    style={{ marginTop: '20px' }}
+                                    onClick={() => handleSaveEdit(task.id)} 
+                                >
+                                    Save Task
+                                </Button>
+                            </>
+                        ) : (
+   
+                            <>
+                                <ListItemText 
+                                    primary={task.title} 
+                                    secondary={`Due: ${task.due_date} | Priority: ${task.priority}`} 
+                                />
+                                <IconButton color="primary" onClick={() => handleEditTask(task)} style={{ fontSize: '1rem' }}>
+                                    Edit
+                                </IconButton>
+                                <IconButton color="secondary" onClick={() => handleDeleteTask(task.id)}>
+                                    <DeleteIcon />
+                                </IconButton>
+                            </>
+                        )}
                     </ListItem>
                 ))}
             </List>
         );
     };
+    
+    
+    const handleSaveEdit = async (taskId) => {
+        // Ensure all required fields are filled out before sending the request
+        if (!editedTask.title || !editedTask.priority || !editedTask.due_date || !editedTask.status) {
+            return alert('Title, priority, due date, and status are required fields.');
+        }
+    
+        try {
+            // Send PUT request to update task with the task ID in the URL
+            const response = await axios.put(`http://localhost:5001/tasks/${taskId}`, editedTask, {
+                headers: {
+                    'Authorization': `Bearer ${token}`, // Ensure token is in the correct format
+                },
+            });
+    
+            // Check response status and handle accordingly
+            if (response.status === 200) {
+                // Successfully updated, reset editing state
+                setEditingTaskId(null);  // Clear editing state
+                setEditedTask({ title: '', description: '', priority: '', due_date: '', status: 'pending' });  // Clear form data and set default status
+                alert('Task updated successfully!');
+                fetchTasks();  // Re-fetch tasks after update
+                fetchTaskLog();  // Re-fetch task log after update
+            } else {
+                alert('Failed to update task. Please try again.');
+            }
+        } catch (error) {
+            // If an error occurs, log it to the console and alert the user
+            console.error('Failed to update task:', error.response ? error.response.data : error.message);
+            alert('Failed to update task');
+        }
+    };
+    
+    // Handle task edit
+    const handleEditTask = (task) => {
+        setEditingTaskId(task.id);  // Set the task id to start editing
+        setEditedTask({
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            due_date: task.due_date,
+            status: task.status || ''  // Set status if available, otherwise empty string
+        });
+    };
+    
+    
 
 // Component to show task log
 const renderTaskLog = () => {
@@ -192,12 +314,30 @@ const renderTaskLog = () => {
     );
 };
 
+const handleTaskChange = (e) => {
+    if (editingTaskId !== null) {
+        setEditedTask({
+            ...editedTask,
+            [e.target.name]: e.target.value
+        });
+    } else {
+        setNewTask({
+            ...newTask,
+            [e.target.name]: e.target.value
+        });
+    }
+};
+const toggleSortBy = () => {
+    setSortBy((prevSortBy) => (prevSortBy === 'priority' ? 'date' : 'priority'));
+};
+
+
+
     return (
         <Container>
             <Typography variant="h3" gutterBottom>
                 Task Management App
             </Typography>
-
             {/* Login/Register*/}
             {!token && (
                 <>
@@ -324,6 +464,9 @@ const renderTaskLog = () => {
                     </form>
                     <Typography variant="h5" gutterBottom >Task List</Typography>
                     {renderTaskList()}
+                    <Button variant="contained" color="secondary" onClick={toggleSortBy} fullWidth>
+                        Sort by {sortBy === 'priority' ? 'Date' : 'Priority'}
+                    </Button>
                     <Typography variant="h5" gutterBottom style={{ marginTop: '20px'}}>Task Log</Typography>
                     {renderTaskLog()}
                     <Button 
