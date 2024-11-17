@@ -29,11 +29,25 @@ If you don’t have SQLite installed on your local machine, you can install it v
 - **macOS**:
   ```bash
   brew install sqlite
+- **Windows**:
+  Step 1 − Go to the [SQLite](https://www.sqlite.org/download.html) download page, and download precompiled binaries from the Windows section.
+
+  Step 2 − Download sqlite-shell-win32-*.zip and sqlite-dll-win32-*.zip zipped files.
+
+  Step 3 − Create a folder C:\>sqlite and unzip above two zipped files in this folder, which will give you sqlite3.def, sqlite3.dll and sqlite3.exe files.
+
+  Step 4 − Add C:\>sqlite in your PATH environment variable and finally go to the command prompt and issue sqlite3 command, which should display the following result.
+  ```bash
+  C:\>sqlite3
+  SQLite version 3.7.15.2 2013-01-09 11:53:05
+  Enter ".help" for instructions
+  Enter SQL statements terminated with a ";"
+  sqlite>
 
 ### 2. Create the SQLite Database
 
 Open a terminal and run the following commands:
-- **macOS**
+- **macOS/Windows**
   ```bash
   sqlite3 tasks.db
 
@@ -41,7 +55,7 @@ Open a terminal and run the following commands:
 
 Inside the SQLite shell (which opens after running sqlite3 tasks.db), create the Tasks table by running the following SQL command:
 
-- **macOS**
+- **macOS/Windows**
   ```bash
   
   CREATE TABLE IF NOT EXISTS Tasks (
@@ -56,7 +70,7 @@ Inside the SQLite shell (which opens after running sqlite3 tasks.db), create the
 
 Also, we need to set up a table for logging tasks. Create that table by running the following SQL command:
 
-- **macOS**
+- **macOS/Windows**
   ```bash
   
   CREATE TABLE IF NOT EXISTS TaskLog (
@@ -74,30 +88,31 @@ Also, we need to set up a table for logging tasks. Create that table by running 
 ### 4. Exit the SQLite Shell
 After creating the table, type .exit to exit the SQLite shell:
 
-- **macOS**
+- **macOS/Windows**
   ```bash
   .exit
 
 ### 5. Install dependencies
-- **macOS**
+Note: Move to your working directory if not in it already
+- **macOS/Windows**
   ```bash
   npm install
 
 ### 6. Create .env file
 In the server folder, create a .env file and copy in the text below (key can be anything):
-- **macOS**
+- **macOS/Windows**
   ```bash
   SECRET_KEY=enter-your-key-here
 
 ### 7. Start Frontend
 In the client folder, run:
-- **macOS**
+- **macOS/Windows**
   ```bash
   npm start
 
 ### 8. Start Backend
 In the server folder, run:
-- **macOS**
+- **macOS/Windows**
   ```bash
   node app.js
 
