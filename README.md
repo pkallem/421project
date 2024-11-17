@@ -44,13 +44,14 @@ Inside the SQLite shell (which opens after running sqlite3 tasks.db), create the
 - **macOS**
   ```bash
   
-  CREATE TABLE Tasks (
+  CREATE TABLE IF NOT EXISTS Tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     description TEXT,
     priority INTEGER NOT NULL,
     due_date DATE,
-    status TEXT DEFAULT 'pending'
+    status TEXT DEFAULT 'pending',
+    user_id INTEGER
   );
 
 Also, we need to set up a table for logging tasks. Create that table by running the following SQL command:
@@ -65,7 +66,8 @@ Also, we need to set up a table for logging tasks. Create that table by running 
     priority INTEGER,
     due_date DATE,
     log_action TEXT,
-    log_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    log_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id INTEGER
   );
 
 
@@ -76,15 +78,19 @@ After creating the table, type .exit to exit the SQLite shell:
   ```bash
   .exit
 
-### 5. Start Frontend
+### 5. Install dependencies
+- **macOS**
+  ```bash
+  npm install
+
+### 6. Start Frontend
 In the client folder, run:
 - **macOS**
   ```bash
   npm start
 
-### 6. Start Backend
+### 7. Start Backend
 In the server folder, run:
 - **macOS**
   ```bash
   node app.js
-

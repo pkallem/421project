@@ -1,330 +1,345 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState} from 'react';
 import axios from 'axios';
-import { Container, TextField, Button, Card, CardContent, Typography, Grid } from '@mui/material';
-import { makeStyles } from '@mui/styles';
-
-const useStyles = makeStyles({
-    formContainer: {
-        marginTop: '20px',
-        marginBottom: '20px',
-        padding: '20px',
-        border: '1px solid #ccc',
-        borderRadius: '10px',
-        backgroundColor: '#f9f9f9',
-    },
-    taskCard: {
-        marginBottom: '10px',
-        padding: '20px',
-        backgroundColor: '#fff',
-        borderRadius: '10px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-    },
-    taskTitle: {
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-    },
-    taskDescription: {
-        fontSize: '1rem',
-        color: '#555',
-    },
-    buttonGroup: {
-        marginTop: '15px',
-    },
-});
+import { Container, TextField, Button, Typography, List, ListItem, ListItemText, IconButton } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const App = () => {
-    const classes = useStyles();
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
     const [tasks, setTasks] = useState([]);
-    const [taskLog, setTaskLog] = useState([]); // State for task log
-    const [editingTaskId, setEditingTaskId] = useState(null);
-    const [editedTask, setEditedTask] = useState({ title: '', description: '', priority: 1, due_date: '' });
-    const [form, setForm] = useState({ title: '', description: '', priority: 1, due_date: '' });
-    const [sortBy, setSortBy] = useState('priority'); // Start with 'priority'
+    const [taskLog, setTaskLog] = useState([]);
+    const [newTask, setNewTask] = useState({
+        title: '',
+        description: '',
+        priority: '',
+        due_date: ''
+    });
+    const [token, setToken] = useState(localStorage.getItem('token') || ''); 
+    const [isRegistering, setIsRegistering] = useState(false); 
 
-    useEffect(() => {
-        fetchTasks();
-    }, []);
-    
-    useEffect(() => {
-        fetchTaskLog();
-    }, []);
-
-    const fetchTasks = async () => {
-        try {
-            const result = await axios.get('http://localhost:5001/tasks');
-            setTasks(result.data);
-        } catch (error) {
-            console.error('Error fetching tasks:', error.response ? error.response.data : error.message);
-        }
-    };
-
-    const handleSubmit = async (e) => {
+    // Handle login form submission
+    const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://localhost:5001/tasks', form);
-            fetchTasks();
-            fetchTaskLog();
-            setForm({ title: '', description: '', priority: 1, due_date: '' }); // Clear form after submit
+            const response = await axios.post('http://localhost:5001/login', { username, password });
+            const { token } = response.data;
+            localStorage.setItem('token', token);
+            setToken(token);
+            alert('Login successful!');
         } catch (error) {
-            console.error('Error adding task:', error.response ? error.response.data : error.message);
+            console.error('Login failed:', error.response ? error.response.data : error.message);
+            alert('Login failed');
         }
     };
 
-    const handleDelete = async (id) => {
+    // Handle registration form submission
+    const handleRegister = async (e) => {
+        e.preventDefault();
         try {
-            await axios.delete(`http://localhost:5001/tasks/${id}`);
-            fetchTasks();
+            await axios.post('http://localhost:5001/register', { username, password });
+            alert('Registration successful! You can now log in.');
+            setIsRegistering(false); 
+        } catch (error) {
+            console.error('Registration failed:', error.response ? error.response.data : error.message);
+            alert('Registration failed');
+        }
+    };
+
+    // Handle task form submission
+    const handleTaskSubmit = async (e) => {
+        e.preventDefault();
+        if (!token) return alert('Please log in first');
+        
+        try {
+            await axios.post('http://localhost:5001/tasks', newTask, {
+                headers: {
+                    'Authorization': `Bearer ${token}`, 
+                }
+            });
+
+            setNewTask({
+                title: '',
+                description: '',
+                priority: '',
+                due_date: ''
+            });
+            alert('Task added!');
+            fetchTasks(); 
             fetchTaskLog();
         } catch (error) {
-            console.error('Error deleting task:', error.response ? error.response.data : error.message);
+            console.error('Failed to add task:', error.response ? error.response.data : error.message);
+            alert('Failed to add task');
         }
     };
 
-    const handleEditClick = (task) => {
-        setEditingTaskId(task.id);
-        setEditedTask({
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            due_date: task.due_date,
-        });
-    };
-
-    const handleSaveClick = async (id) => {
+    //  Fetch tasks after successful login
+    const fetchTasks = async () => {
+        if (!token) return alert('Please log in first');
         try {
-            await axios.put(`http://localhost:5001/tasks/${id}`, editedTask);
-            setEditingTaskId(null);
-            fetchTasks();
+            const response = await axios.get('http://localhost:5001/tasks', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                }
+            });
+            setTasks(response.data);
         } catch (error) {
-            console.error('Error updating task:', error.response ? error.response.data : error.message);
+            console.error('Failed to fetch tasks:', error.response ? error.response.data : error.message);
+            alert('Failed to fetch tasks');
         }
     };
 
-    const handleFieldChange = (field, value) => {
-        setEditedTask({ ...editedTask, [field]: value });
-    };
-
+    // Fetch task logs
     const fetchTaskLog = async () => {
+        const token = localStorage.getItem('token'); // Get the token from localStorage
+    
+        if (!token) {
+            alert('Please log in');
+            return;
+        }
+    
         try {
-            const result = await axios.get('http://localhost:5001/tasklog');
-            setTaskLog(result.data);
+            const response = await axios.get('http://localhost:5001/tasklog', {
+                headers: {
+                    'Authorization': `Bearer ${token}` // Include the token in the request header
+                }
+            });
+            setTaskLog(response.data); // Set the task log in the state
         } catch (error) {
-            console.error('Error fetching tasks:', error.response ? error.response.data : error.message);
+            console.error('Failed to fetch task log:', error.response ? error.response.data : error.message);
+            alert('Failed to fetch task log');
         }
     };
-
-    const clearTaskLog = async () => {
+    
+     // Clear Task Log
+     const clearTaskLog = async () => {
+        if (!token) return alert('Please log in first');
         try {
-            const response = await axios.delete('http://localhost:5001/tasklogtwo');
-            alert(response.data.message);
-            fetchTaskLog();
+            await axios.delete('http://localhost:5001/tasklogtwo', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setTaskLog([]); // Clear task log from the UI
+            alert('Task log cleared successfully');
         } catch (error) {
+            console.error('Failed to clear task log:', error);
             alert('Failed to clear task log');
         }
     };
 
-    const toggleSortBy = () => {
-        setSortBy((prevSortBy) => (prevSortBy === 'priority' ? 'date' : 'priority'));
+    // Delete task
+    const handleDeleteTask = async (taskId) => {
+        try {
+            await axios.delete(`http://localhost:5001/tasks/${taskId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                }
+            });
+            alert('Task deleted');
+            fetchTasks();
+            fetchTaskLog();
+        } catch (error) {
+            console.error('Failed to delete task:', error.response ? error.response.data : error.message);
+            alert('Failed to delete task');
+        }
     };
 
-    const sortedTasks = [...tasks].sort((a, b) => {
-        if (sortBy === 'priority') {
-            return a.priority - b.priority; // Lowest priority first
-        } else {
-            return new Date(a.due_date) - new Date(b.due_date); // Closest date first
+    // Update task input field values
+    const handleTaskChange = (e) => {
+        setNewTask({
+            ...newTask,
+            [e.target.name]: e.target.value
+        });
+    };
+
+    // Show task list
+    const renderTaskList = () => {
+        if (tasks.length === 0) {
+            return <Typography>No tasks available</Typography>;
         }
-    });
+        return (
+            <List>
+                {tasks.map(task => (
+                    <ListItem key={task.id}>
+                        <ListItemText 
+                            primary={task.title} 
+                            secondary={`Due: ${task.due_date} | Priority: ${task.priority}`} 
+                        />
+                        <IconButton color="secondary" onClick={() => handleDeleteTask(task.id)}>
+                            <DeleteIcon />
+                        </IconButton>
+                    </ListItem>
+                ))}
+            </List>
+        );
+    };
+
+// Component to show task log
+const renderTaskLog = () => {
+    if (taskLog.length === 0) {
+        return <Typography>No task log available</Typography>;
+    }
+    return (
+        <List>
+            {taskLog
+                .slice().reverse().map(log => (
+                    <ListItem key={log.id}>
+                        <ListItemText
+                            primary={`${log.log_action} - ${log.title}`}
+                            secondary={`Date: ${log.log_timestamp} | Priority: ${log.priority}`}
+                        />
+                    </ListItem>
+                ))}
+        </List>
+    );
+};
 
     return (
         <Container>
-            <Typography variant="h3" align="center" gutterBottom>
-                Task Scheduler
+            <Typography variant="h3" gutterBottom>
+                Task Management App
             </Typography>
 
-            <form className={classes.formContainer} onSubmit={handleSubmit}>
-                <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
+            {/* Login/Register*/}
+            {!token && (
+                <>
+                    <Typography variant="h4" gutterBottom>{isRegistering ? 'Register' : 'Login'}</Typography>
+                    {isRegistering ? (
+                        <form onSubmit={handleRegister}>
+                            <TextField
+                                label="Username"
+                                variant="outlined"
+                                fullWidth
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                required
+                            />
+                            <TextField
+                                label="Password"
+                                type="password"
+                                variant="outlined"
+                                fullWidth
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                style={{ marginTop: '20px', marginBottom: '20px' }}
+                            />
+                            <Button type="submit" variant="contained" color="primary" fullWidth>
+                                Register
+                            </Button>
+                            <Button
+                                variant="text"
+                                color="secondary"
+                                fullWidth
+                                onClick={() => setIsRegistering(false)}
+                                style={{ marginTop: '10px'}}
+                            >
+                                Already have an account? Login
+                            </Button>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleLogin}>
+                            <TextField
+                                label="Username"
+                                variant="outlined"
+                                fullWidth
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                required
+                            />
+                            <TextField
+                                label="Password"
+                                type="password"
+                                variant="outlined"
+                                fullWidth
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                style={{ marginTop: '20px', marginBottom: '20px' }}
+                            />
+                            <Button type="submit" variant="contained" color="primary" fullWidth>
+                                Login
+                            </Button>
+                            <Button
+                                variant="text"
+                                color="secondary"
+                                fullWidth
+                                onClick={() => setIsRegistering(true)}
+                                style={{ marginTop: '10px'}}
+                            >
+                                Don't have an account? Register
+                            </Button>
+                        </form>
+                    )}
+                </>
+            )}
+
+            {/* After login, show tasks and task log */}
+            {token && (
+                <>
+                    <Typography variant="h5" gutterBottom>Add New Task</Typography>
+                    <form onSubmit={handleTaskSubmit}>
                         <TextField
-                            fullWidth
-                            label="Task Title"
+                            label="Title"
                             variant="outlined"
-                            value={form.title}
-                            onChange={(e) => setForm({ ...form, title: e.target.value })}
-                            required
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
                             fullWidth
-                            label="Priority"
-                            type="number"
-                            variant="outlined"
-                            value={form.priority}
-                            onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                            name="title"
+                            value={newTask.title}
+                            onChange={handleTaskChange}
                             required
+                            style={{marginBottom: '20px' }}
                         />
-                    </Grid>
-                    <Grid item xs={12}>
                         <TextField
-                            fullWidth
                             label="Description"
-                            multiline
-                            rows={4}
                             variant="outlined"
-                            value={form.description}
-                            onChange={(e) => setForm({ ...form, description: e.target.value })}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
                             fullWidth
+                            name="description"
+                            value={newTask.description}
+                            onChange={handleTaskChange}
+                        />
+                        <TextField
+                            label="Priority"
+                            variant="outlined"
+                            fullWidth
+                            name="priority"
+                            value={newTask.priority}
+                            onChange={handleTaskChange}
+                            required
+                            style={{ marginTop: '20px', marginBottom: '20px' }}
+                        />
+                        <TextField
                             label="Due Date"
                             type="date"
                             variant="outlined"
-                            InputLabelProps={{ shrink: true }}
-                            value={form.due_date}
-                            onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                            fullWidth
+                            name="due_date"
+                            value={newTask.due_date}
+                            onChange={handleTaskChange}
                             required
+                            InputLabelProps={{
+                                shrink: true,
+                            }}
                         />
-                    </Grid>
-                    <Grid item xs={12} className={classes.buttonGroup}>
-                        <Button type="submit" variant="contained" color="primary" fullWidth>
+                        <Button type="submit" variant="contained" color="primary" fullWidth style={{ marginTop: '20px', marginBottom: '20px' }} >
                             Add Task
                         </Button>
-                    </Grid>
-                </Grid>
-            </form>
-
-            {/* Sorting Toggle Button */}
-            <Button
-                variant="contained"
-                color="secondary"
-                onClick={toggleSortBy}
-                style={{ marginBottom: '20px' }}
-            >
-                Sorted by {sortBy === 'priority' ? 'Priority' : 'Date'}
-            </Button>
-
-            <Typography variant="h4" gutterBottom>
-                Task List
-            </Typography>
-            {sortedTasks.length === 0 ? (
-                <Typography variant="h6" align="center" color="textSecondary">
-                    No tasks available. Add a new task!
-                </Typography>
-            ) : (
-                sortedTasks.map((task) => (
-                    <Card key={task.id} className={classes.taskCard}>
-                        <CardContent>
-                            {editingTaskId === task.id ? (
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Task Title"
-                                            variant="outlined"
-                                            value={editedTask.title}
-                                            onChange={(e) => handleFieldChange('title', e.target.value)}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Priority"
-                                            type="number"
-                                            variant="outlined"
-                                            value={editedTask.priority}
-                                            onChange={(e) => handleFieldChange('priority', e.target.value)}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <TextField
-                                            fullWidth
-                                            label="Description"
-                                            multiline
-                                            rows={4}
-                                            variant="outlined"
-                                            value={editedTask.description}
-                                            onChange={(e) => handleFieldChange('description', e.target.value)}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField
-                                            fullWidth
-                                            label="Due Date"
-                                            type="date"
-                                            variant="outlined"
-                                            InputLabelProps={{ shrink: true }}
-                                            value={editedTask.due_date}
-                                            onChange={(e) => handleFieldChange('due_date', e.target.value)}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} className={classes.buttonGroup}>
-                                        <Button
-                                            variant="contained"
-                                            color="primary"
-                                            onClick={() => handleSaveClick(task.id)}
-                                        >
-                                            Save
-                                        </Button>
-                                    </Grid>
-                                </Grid>
-                            ) : (
-                                <>
-                                    <Typography className={classes.taskTitle}>{task.title}</Typography>
-                                    <Typography className={classes.taskDescription}>{task.description}</Typography>
-                                    <Typography>Priority: {task.priority}</Typography>
-                                    <Typography>Due Date: {task.due_date}</Typography>
-                                    <Button
-                                        variant="outlined"
-                                        color="primary"
-                                        onClick={() => handleEditClick(task)}
-                                        style={{ marginRight: '10px' }}
-                                    >
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        color="secondary"
-                                        onClick={() => handleDelete(task.id)}
-                                    >
-                                        Delete
-                                    </Button>
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-                ))
-            )}
-            <Button
-                variant="contained"
-                color="secondary"
-                onClick={clearTaskLog}
-                style={{ marginBottom: '20px' }}
-            >
-                Clear Task Log
-            </Button>
-            {/* Task Log Section */}
-            <Typography variant="h4" gutterBottom>
-                Task Log
-            </Typography>
-            {taskLog.length === 0 ? (
-                <Typography variant="h6" align="center" color="textSecondary">
-                    No log entries.
-                </Typography>
-            ) : (
-                taskLog.map((log) => (
-                    <Card key={log.id} className={classes.taskCard}>
-                        <CardContent>
-                            <Typography className={classes.taskTitle}>{log.title}</Typography>
-                            <Typography className={classes.taskDescription}>{log.description}</Typography>
-                            <Typography>Priority: {log.priority}</Typography>
-                            <Typography>Due Date: {log.due_date}</Typography>
-                            <Typography>Log Action: {log.log_action}</Typography>
-                            <Typography>Timestamp: {log.log_timestamp}</Typography>
-                        </CardContent>
-                    </Card>
-                ))
+                    </form>
+                    <Typography variant="h5" gutterBottom >Task List</Typography>
+                    {renderTaskList()}
+                    <Typography variant="h5" gutterBottom style={{ marginTop: '20px'}}>Task Log</Typography>
+                    {renderTaskLog()}
+                    <Button 
+                        variant="contained" 
+                        color="secondary" 
+                        onClick={clearTaskLog}
+                        fullWidth
+                        style={{ marginTop: '20px', marginBottom: '20px' }}
+                    >
+                        Clear Task Log</Button>
+                    <Button variant="outlined" color="secondary" onClick={() => {
+                        localStorage.removeItem('token');
+                        setToken('');
+                        alert('Logged out');
+                    }}>Logout</Button>
+                </>
             )}
         </Container>
     );
