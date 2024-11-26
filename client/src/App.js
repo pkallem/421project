@@ -1,6 +1,15 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Container, TextField, Button, Typography, List, ListItem, ListItemText, IconButton } from '@mui/material';
+import {
+    Container,
+    TextField,
+    Button,
+    Typography,
+    List,
+    ListItem,
+    ListItemText,
+    IconButton,
+} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 const App = () => {
@@ -12,7 +21,7 @@ const App = () => {
         title: '',
         description: '',
         priority: '',
-        due_date: ''
+        due_date: '',
     });
     const [editingTaskId, setEditingTaskId] = useState(null);
     const [editedTask, setEditedTask] = useState({
@@ -20,19 +29,19 @@ const App = () => {
         description: '',
         priority: '',
         due_date: '',
-        status: 'pending'
+        status: 'pending',
     });
     const [sortBy, setSortBy] = useState('priority');
-
-    const [token, setToken] = useState(localStorage.getItem('token') || ''); 
-    const [isRegistering, setIsRegistering] = useState(false); 
+    const [token, setToken] = useState(localStorage.getItem('token') || '');
+    const [isRegistering, setIsRegistering] = useState(false);
 
     useEffect(() => {
-        fetchTasks();
-        fetchTaskLog();
-    }, []);
+        if (token) {
+            fetchTasks();
+            fetchTaskLog();
+        }
+    }, [token]);
 
-    // Handle login form submission
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
@@ -47,39 +56,48 @@ const App = () => {
         }
     };
 
-    // Handle registration form submission
     const handleRegister = async (e) => {
         e.preventDefault();
         try {
             await axios.post('http://localhost:5001/register', { username, password });
             alert('Registration successful! You can now log in.');
-            setIsRegistering(false); 
+            setIsRegistering(false);
         } catch (error) {
             console.error('Registration failed:', error.response ? error.response.data : error.message);
             alert('Registration failed');
         }
     };
 
-    // Handle task form submission
     const handleTaskSubmit = async (e) => {
         e.preventDefault();
         if (!token) return alert('Please log in first');
-        
+
+        const { title, priority, due_date } = newTask;
+        if (!title || !priority || !due_date) {
+            return alert('Title, priority, and due date are required.');
+        }
+        if (priority <= 0 || !Number.isInteger(Number(priority))) {
+            return alert('Priority must be a positive integer.');
+        }
+        if (new Date(due_date) < new Date()) {
+            return alert('Due date cannot be in the past.');
+        }
+
         try {
             await axios.post('http://localhost:5001/tasks', newTask, {
                 headers: {
-                    'Authorization': `Bearer ${token}`, 
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             });
 
             setNewTask({
                 title: '',
                 description: '',
                 priority: '',
-                due_date: ''
+                due_date: '',
             });
             alert('Task added!');
-            fetchTasks(); 
+            fetchTasks();
             fetchTaskLog();
         } catch (error) {
             console.error('Failed to add task:', error.response ? error.response.data : error.message);
@@ -88,51 +106,54 @@ const App = () => {
     };
 
     const fetchTasks = async () => {
-        if (!token) return alert('Please log in first');
+        if (!token) return;
         try {
             const response = await axios.get('http://localhost:5001/tasks', {
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    Authorization: `Bearer ${token}`,
                 },
             });
             setTasks(response.data);
         } catch (error) {
-            console.error('Failed to fetch tasks:', error.response ? error.response.data : error.message);
-            alert('Failed to fetch tasks');
+            if (error.response && error.response.status === 401) {
+                localStorage.removeItem('token');
+                setToken('');
+                alert('Session expired. Please log in again.');
+            } else {
+                console.error('Failed to fetch tasks:', error.response ? error.response.data : error.message);
+                alert('Failed to fetch tasks');
+            }
         }
     };
-    
 
-    // Fetch task logs
     const fetchTaskLog = async () => {
-        const token = localStorage.getItem('token'); 
-    
-        if (!token) {
-            alert('Please log in');
-            return;
-        }
-    
+        if (!token) return;
         try {
             const response = await axios.get('http://localhost:5001/tasklog', {
                 headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             });
-            setTaskLog(response.data); 
+            setTaskLog(response.data);
         } catch (error) {
-            console.error('Failed to fetch task log:', error.response ? error.response.data : error.message);
-            alert('Failed to fetch task log');
+            if (error.response && error.response.status === 401) {
+                localStorage.removeItem('token');
+                setToken('');
+                alert('Session expired. Please log in again.');
+            } else {
+                console.error('Failed to fetch task log:', error.response ? error.response.data : error.message);
+                alert('Failed to fetch task log');
+            }
         }
     };
-    
-     // Clear Task Log
-     const clearTaskLog = async () => {
+
+    const clearTaskLog = async () => {
         if (!token) return alert('Please log in first');
         try {
             await axios.delete('http://localhost:5001/tasklogtwo', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
             });
-            setTaskLog([]); // Clear task log from the UI
+            setTaskLog([]);
             alert('Task log cleared successfully');
         } catch (error) {
             console.error('Failed to clear task log:', error);
@@ -140,13 +161,12 @@ const App = () => {
         }
     };
 
-    // Delete task
     const handleDeleteTask = async (taskId) => {
         try {
             await axios.delete(`http://localhost:5001/tasks/${taskId}`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             });
             alert('Task deleted');
             fetchTasks();
@@ -157,13 +177,11 @@ const App = () => {
         }
     };
 
-
-
     const renderTaskList = () => {
         if (tasks.length === 0) {
             return <Typography>No tasks available</Typography>;
         }
-        // Sort tasks based on the selected criteria (priority or due date)
+
         const sortedTasks = [...tasks].sort((a, b) => {
             if (sortBy === 'priority') {
                 return a.priority - b.priority;
@@ -171,10 +189,10 @@ const App = () => {
                 return new Date(a.due_date) - new Date(b.due_date);
             }
         });
-    
+
         return (
             <List>
-                {sortedTasks.map(task => (
+                {sortedTasks.map((task) => (
                     <ListItem key={task.id}>
                         {editingTaskId === task.id ? (
                             <>
@@ -221,19 +239,22 @@ const App = () => {
                                     color="primary"
                                     fullWidth
                                     style={{ marginTop: '20px' }}
-                                    onClick={() => handleSaveEdit(task.id)} 
+                                    onClick={() => handleSaveEdit(task.id)}
                                 >
                                     Save Task
                                 </Button>
                             </>
                         ) : (
-   
                             <>
-                                <ListItemText 
-                                    primary={task.title} 
-                                    secondary={`Due: ${task.due_date} | Priority: ${task.priority}`} 
+                                <ListItemText
+                                    primary={task.title}
+                                    secondary={`Due: ${task.due_date} | Priority: ${task.priority}`}
                                 />
-                                <IconButton color="primary" onClick={() => handleEditTask(task)} style={{ fontSize: '1rem' }}>
+                                <IconButton
+                                    color="primary"
+                                    onClick={() => handleEditTask(task)}
+                                    style={{ fontSize: '1rem' }}
+                                >
                                     Edit
                                 </IconButton>
                                 <IconButton color="secondary" onClick={() => handleDeleteTask(task.id)}>
@@ -246,102 +267,102 @@ const App = () => {
             </List>
         );
     };
-    
-    
+
     const handleSaveEdit = async (taskId) => {
-        // Ensure all required fields are filled out before sending the request
-        if (!editedTask.title || !editedTask.priority || !editedTask.due_date || !editedTask.status) {
-            return alert('Title, priority, due date, and status are required fields.');
+        const { title, priority, due_date, status } = editedTask;
+        if (!title || !priority || !due_date || !status) {
+            return alert('Title, priority, due date, and status are required.');
         }
-    
+        if (priority <= 0 || !Number.isInteger(Number(priority))) {
+            return alert('Priority must be a positive integer.');
+        }
+        if (new Date(due_date) < new Date()) {
+            return alert('Due date cannot be in the past.');
+        }
+
         try {
-            // Send PUT request to update task with the task ID in the URL
             const response = await axios.put(`http://localhost:5001/tasks/${taskId}`, editedTask, {
                 headers: {
-                    'Authorization': `Bearer ${token}`, // Ensure token is in the correct format
+                    Authorization: `Bearer ${token}`,
                 },
             });
-    
-            // Check response status and handle accordingly
+
             if (response.status === 200) {
-                // Successfully updated, reset editing state
-                setEditingTaskId(null);  // Clear editing state
-                setEditedTask({ title: '', description: '', priority: '', due_date: '', status: 'pending' });  // Clear form data and set default status
+                setEditingTaskId(null);
+                setEditedTask({ title: '', description: '', priority: '', due_date: '', status: 'pending' });
                 alert('Task updated successfully!');
-                fetchTasks();  // Re-fetch tasks after update
-                fetchTaskLog();  // Re-fetch task log after update
+                fetchTasks();
+                fetchTaskLog();
             } else {
                 alert('Failed to update task. Please try again.');
             }
         } catch (error) {
-            // If an error occurs, log it to the console and alert the user
             console.error('Failed to update task:', error.response ? error.response.data : error.message);
             alert('Failed to update task');
         }
     };
-    
-    // Handle task edit
+
     const handleEditTask = (task) => {
-        setEditingTaskId(task.id);  // Set the task id to start editing
+        setEditingTaskId(task.id);
         setEditedTask({
             title: task.title,
             description: task.description,
             priority: task.priority,
             due_date: task.due_date,
-            status: task.status || ''  // Set status if available, otherwise empty string
+            status: task.status || '',
         });
     };
-    
-    
 
-// Component to show task log
-const renderTaskLog = () => {
-    if (taskLog.length === 0) {
-        return <Typography>No task log available</Typography>;
-    }
-    return (
-        <List>
-            {taskLog
-                .slice().reverse().map(log => (
-                    <ListItem key={log.id}>
-                        <ListItemText
-                            primary={`${log.log_action} - ${log.title}`}
-                            secondary={`Date: ${log.log_timestamp} | Priority: ${log.priority}`}
-                        />
-                    </ListItem>
-                ))}
-        </List>
-    );
-};
+    // Component to show task log
+    const renderTaskLog = () => {
+        if (taskLog.length === 0) {
+            return <Typography>No task log available</Typography>;
+        }
+        return (
+            <List>
+                {taskLog
+                    .slice()
+                    .reverse()
+                    .map((log) => (
+                        <ListItem key={log.id}>
+                            <ListItemText
+                                primary={`${log.log_action} - ${log.title}`}
+                                secondary={`Date: ${log.log_timestamp} | Priority: ${log.priority}`}
+                            />
+                        </ListItem>
+                    ))}
+            </List>
+        );
+    };
 
-const handleTaskChange = (e) => {
-    if (editingTaskId !== null) {
-        setEditedTask({
-            ...editedTask,
-            [e.target.name]: e.target.value
-        });
-    } else {
-        setNewTask({
-            ...newTask,
-            [e.target.name]: e.target.value
-        });
-    }
-};
-const toggleSortBy = () => {
-    setSortBy((prevSortBy) => (prevSortBy === 'priority' ? 'date' : 'priority'));
-};
-
-
+    const handleTaskChange = (e) => {
+        if (editingTaskId !== null) {
+            setEditedTask({
+                ...editedTask,
+                [e.target.name]: e.target.value,
+            });
+        } else {
+            setNewTask({
+                ...newTask,
+                [e.target.name]: e.target.value,
+            });
+        }
+    };
+    const toggleSortBy = () => {
+        setSortBy((prevSortBy) => (prevSortBy === 'priority' ? 'date' : 'priority'));
+    };
 
     return (
         <Container>
             <Typography variant="h3" gutterBottom>
                 Task Management App
             </Typography>
-            {/* Login/Register*/}
+
             {!token && (
                 <>
-                    <Typography variant="h4" gutterBottom>{isRegistering ? 'Register' : 'Login'}</Typography>
+                    <Typography variant="h4" gutterBottom>
+                        {isRegistering ? 'Register' : 'Login'}
+                    </Typography>
                     {isRegistering ? (
                         <form onSubmit={handleRegister}>
                             <TextField
@@ -370,7 +391,7 @@ const toggleSortBy = () => {
                                 color="secondary"
                                 fullWidth
                                 onClick={() => setIsRegistering(false)}
-                                style={{ marginTop: '10px'}}
+                                style={{ marginTop: '10px' }}
                             >
                                 Already have an account? Login
                             </Button>
@@ -403,7 +424,7 @@ const toggleSortBy = () => {
                                 color="secondary"
                                 fullWidth
                                 onClick={() => setIsRegistering(true)}
-                                style={{ marginTop: '10px'}}
+                                style={{ marginTop: '10px' }}
                             >
                                 Don't have an account? Register
                             </Button>
@@ -412,10 +433,11 @@ const toggleSortBy = () => {
                 </>
             )}
 
-            {/* After login, show tasks and task log */}
             {token && (
                 <>
-                    <Typography variant="h5" gutterBottom>Add New Task</Typography>
+                    <Typography variant="h5" gutterBottom>
+                        Add New Task
+                    </Typography>
                     <form onSubmit={handleTaskSubmit}>
                         <TextField
                             label="Title"
@@ -425,7 +447,7 @@ const toggleSortBy = () => {
                             value={newTask.title}
                             onChange={handleTaskChange}
                             required
-                            style={{marginBottom: '20px' }}
+                            style={{ marginBottom: '20px' }}
                         />
                         <TextField
                             label="Description"
@@ -458,30 +480,47 @@ const toggleSortBy = () => {
                                 shrink: true,
                             }}
                         />
-                        <Button type="submit" variant="contained" color="primary" fullWidth style={{ marginTop: '20px', marginBottom: '20px' }} >
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            color="primary"
+                            fullWidth
+                            style={{ marginTop: '20px', marginBottom: '20px' }}
+                        >
                             Add Task
                         </Button>
                     </form>
-                    <Typography variant="h5" gutterBottom >Task List</Typography>
+                    <Typography variant="h5" gutterBottom>
+                        Task List
+                    </Typography>
                     {renderTaskList()}
                     <Button variant="contained" color="secondary" onClick={toggleSortBy} fullWidth>
                         Sort by {sortBy === 'priority' ? 'Date' : 'Priority'}
                     </Button>
-                    <Typography variant="h5" gutterBottom style={{ marginTop: '20px'}}>Task Log</Typography>
+                    <Typography variant="h5" gutterBottom style={{ marginTop: '20px' }}>
+                        Task Log
+                    </Typography>
                     {renderTaskLog()}
-                    <Button 
-                        variant="contained" 
-                        color="secondary" 
+                    <Button
+                        variant="contained"
+                        color="secondary"
                         onClick={clearTaskLog}
                         fullWidth
                         style={{ marginTop: '20px', marginBottom: '20px' }}
                     >
-                        Clear Task Log</Button>
-                    <Button variant="outlined" color="secondary" onClick={() => {
-                        localStorage.removeItem('token');
-                        setToken('');
-                        alert('Logged out');
-                    }}>Logout</Button>
+                        Clear Task Log
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => {
+                            localStorage.removeItem('token');
+                            setToken('');
+                            alert('Logged out');
+                        }}
+                    >
+                        Logout
+                    </Button>
                 </>
             )}
         </Container>
